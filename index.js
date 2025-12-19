@@ -1,62 +1,31 @@
 const express = require("express");
-const app = express();
+const axios = require("axios");
+const cors = require("cors");
 
-app.use(express.json());
+const app = express();
+app.use(cors());
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = "CHANGE_MOI"; // 🔐 clé secrète
 
-// Stockage temporaire des stands
-const stands = {};
+// ROUTE PRINCIPALE
+app.get("/gamepasses/:userId", async (req, res) => {
+    const userId = req.params.userId;
 
-/* ===============================
-   MIDDLEWARE DE SÉCURITÉ
-================================ */
-app.use((req, res, next) => {
-	const key = req.headers["authorization"];
-	if (key !== API_KEY) {
-		return res.status(403).json({ error: "Forbidden" });
-	}
-	next();
+    try {
+        const url = `https://inventory.roblox.com/v1/users/${userId}/items/GamePass?limit=50&sortOrder=Asc`;
+        const response = await axios.get(url);
+
+        res.json(response.data.data);
+    } catch (err) {
+        res.status(500).json({ error: "Erreur Roblox API" });
+    }
 });
 
-/* ===============================
-   METTRE À JOUR UN STAND
-   (appelé par Roblox)
-================================ */
-app.post("/stand/update", (req, res) => {
-	const { userId, gamepasses } = req.body;
-
-	if (!userId || !Array.isArray(gamepasses)) {
-		return res.status(400).json({ error: "Invalid data" });
-	}
-
-	stands[userId] = {
-		gamepasses,
-		updatedAt: Date.now()
-	};
-
-	res.json({ success: true });
-});
-
-/* ===============================
-   RÉCUPÉRER UN STAND
-================================ */
-app.get("/stand/:userId", (req, res) => {
-	const stand = stands[req.params.userId];
-	if (!stand) {
-		return res.json([]);
-	}
-	res.json(stand.gamepasses);
-});
-
-/* ===============================
-   HEALTH CHECK
-================================ */
+// TEST
 app.get("/", (req, res) => {
-	res.send("Roblox Stand API ONLINE");
+    res.send("API Roblox GamePass OK");
 });
 
 app.listen(PORT, () => {
-	console.log("API lancée sur le port " + PORT);
+    console.log("API lancée sur le port", PORT);
 });
